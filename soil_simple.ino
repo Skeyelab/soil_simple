@@ -34,7 +34,6 @@ void setup() {
   pinMode(9, INPUT);
 }
 
-
 void loop() {
 
   switchState=digitalRead(9);
