@@ -85,7 +85,7 @@ void loop() {
   }
 
   delay(5000);
-  
+
   lcd.setCursor(0,0);
   lcd.print(" MD");
   lcd.setCursor(0,1);
@@ -98,28 +98,19 @@ void loop() {
     if (audibleAlarm){
       buzz(speaker, 200, 50);
     }
-    LEDalarm(LED);  
+    LEDalarm(LED, 10);  
   }
 
 }
 
-void LEDalarm(int targetPin){
-  digitalWrite(targetPin, HIGH);
-  delay(1000);
-  digitalWrite(targetPin, LOW);
-  delay(500);
-  digitalWrite(targetPin, HIGH);
-  delay(1000);
-  digitalWrite(targetPin, LOW);
-  delay(500);
-  digitalWrite(targetPin, HIGH);
-  delay(1000);
-  digitalWrite(targetPin, LOW);
-  delay(500);
-  digitalWrite(targetPin, HIGH);
-  delay(1000);
-  digitalWrite(targetPin, LOW);
-  delay(500);
+void LEDalarm(int targetPin, int numFlashes){
+
+  for (int Flashes = 0; Flashes < numFlashes; Flashes++) { 
+    digitalWrite(targetPin, HIGH);
+    delay(1000);
+    digitalWrite(targetPin, LOW);
+    delay(500);
+  }
 
 }
 
@@ -167,6 +158,7 @@ int SoilMoisture(){
 
   return reading;
 }
+
 
 
 
