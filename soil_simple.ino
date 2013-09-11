@@ -105,8 +105,22 @@ void loop() {
 
 void LEDalarm(int targetPin){
   digitalWrite(targetPin, HIGH);
-  delay(100);
+  delay(1000);
   digitalWrite(targetPin, LOW);
+  delay(500);
+  digitalWrite(targetPin, HIGH);
+  delay(1000);
+  digitalWrite(targetPin, LOW);
+  delay(500);
+  digitalWrite(targetPin, HIGH);
+  delay(1000);
+  digitalWrite(targetPin, LOW);
+  delay(500);
+  digitalWrite(targetPin, HIGH);
+  delay(1000);
+  digitalWrite(targetPin, LOW);
+  delay(500);
+
 }
 
 void buzz(int targetPin, long frequency, long length) {
