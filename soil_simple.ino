@@ -1,14 +1,21 @@
-#include <LiquidCrystal.h>#include "math.h"
+#include <LiquidCrystal.h>
+#include "RunningAverage.h"
+
+RunningAverage tmpAvg(10);
+RunningAverage lgtAvg(10);
+RunningAverage mstAvg(10);
 
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
-int moistureSensor = 2;
 int lightSensor = 1;
 int tempSensor = 0;
-int moisture_val;
 int light_val;
 int temp_val;
 int moisture_val_ac;
+int delayTime = 5000;
+
+int tempCal = 3;
+
 
 #define moisture_input 4
 #define divider_top 7
@@ -36,11 +43,8 @@ void loop() {
     audibleAlarm = !audibleAlarm;
   }
   //collect moisture data
-
-  moisture_val = analogRead(moistureSensor); // read the value from the moisture-sensing probes
-  Serial.print("moisture sensor reads ");
-  Serial.println( moisture_val );
   moisture_val_ac = SoilMoisture();
+  mstAvg.addValue( moisture_val_ac);
 
   Serial.print("AC Reading ");
   // Serial.println(SoilMoisture());
@@ -49,13 +53,15 @@ void loop() {
   light_val = analogRead(lightSensor); // read the value from the photosensor
   Serial.print("light sensor reads ");
   Serial.println( light_val );
+  lgtAvg.addValue( light_val);
+
 
   //collect temp data  
   temp_val = analogRead(tempSensor);
   Serial.print("temp sensor reads ");
   Serial.print( temp_val );
   // convert the ADC reading to voltage
-  float voltage = (temp_val/1024.0) * 5.0;
+  float voltage = ((temp_val + tempCal)/1024.0) * 5.0;
   // Send the voltage level out the Serial port
   Serial.print(", Volts: ");
   Serial.print(voltage);
@@ -66,17 +72,25 @@ void loop() {
   float Ftemperature = (temperature * (9.0/5.0)) + 32.0;
   Serial.println(Ftemperature);
 
+  tmpAvg.addValue( Ftemperature);
+  Serial.print("Running Average: ");
+
+  int avgMst = mstAvg.getAverage();
+  int avgLgt = lgtAvg.getAverage();
+
+
+
   //output data to LCD
   lcd.begin(16, 2);
-  lcd.print(" MA |  L  |  T");
+  lcd.print(" MD |  L  |  T");
   lcd.setCursor(0, 1);
   lcd.print("    |     |");
   lcd.setCursor(0, 1);
-  lcd.print(moisture_val);
+  lcd.print(avgMst);
   lcd.setCursor(6, 1);
-  lcd.print(light_val);
+  lcd.print(avgLgt);
   lcd.setCursor(11, 1);
-  lcd.print(Ftemperature);  
+  lcd.print(tmpAvg.getAverage());  
   lcd.setCursor(15, 1);
   lcd.print("F"); 
   if (audibleAlarm){
@@ -84,14 +98,10 @@ void loop() {
     lcd.print("*");  
   }
 
-  delay(5000);
 
-  lcd.setCursor(0,0);
-  lcd.print(" MD");
-  lcd.setCursor(0,1);
-  lcd.print(moisture_val_ac);
 
-  delay(5000);
+
+  delay(delayTime);
 
   //sound alarm for low readings
   if (moisture_val_ac < 600){
@@ -130,6 +140,7 @@ void buzz(int targetPin, long frequency, long length) {
   }
   digitalWrite(13,LOW);
 }
+
 int SoilMoisture(){
   int reading;
   // set driver pins to outputs
@@ -158,6 +169,9 @@ int SoilMoisture(){
 
   return reading;
 }
+
+
+
 
 
 
