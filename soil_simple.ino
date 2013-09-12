@@ -1,3 +1,16 @@
+#include <SdFat.h>
+
+// SD chip select pin
+const uint8_t chipSelect = SS;
+
+// file system object
+SdFat sd;
+
+// create Serial stream
+ArduinoOutStream cout(Serial);
+
+// store error strings in flash to save RAM
+#define error(s) sd.errorHalt_P(PSTR(s))
 #include <LiquidCrystal.h>
 #include "RunningAverage.h"
 
@@ -16,19 +29,21 @@ int delayTime = 5000;
 
 int tempCal = 3;
 
+int mst100 = 900;
+int mst0 = 0;
 
 #define moisture_input 4
 #define divider_top 7
 #define divider_bottom 8
 
-int speaker = 6;
-int LED = 13;
 int switchState = 0;
 int audibleAlarm = 0;
 
 void setup() {
+
+  if (!sd.begin(chipSelect, SPI_FULL_SPEED)) sd.initErrorHalt();
+
   Serial.begin(9600); //open serial port
-  pinMode(speaker, OUTPUT);//buzzer
   pinMode(13, OUTPUT);
   pinMode(8, OUTPUT);
   pinMode(9, INPUT);
@@ -37,7 +52,7 @@ void setup() {
 void loop() {
 
   switchState=digitalRead(9);
-  Serial.println(switchState);
+
   if (switchState==HIGH){
     audibleAlarm = !audibleAlarm;
   }
@@ -45,9 +60,10 @@ void loop() {
   moisture_val_ac = SoilMoisture();
   mstAvg.addValue( moisture_val_ac);
 
-  Serial.print("AC Reading ");
-  // Serial.println(SoilMoisture());
-
+  Serial.print("Moistrue Reading ");
+  Serial.print(moisture_val_ac);
+  Serial.print(" ");
+  Serial.println(MoisturePercentage(moisture_val_ac,mst100));
   //collect light data  
   light_val = analogRead(lightSensor); // read the value from the photosensor
   Serial.print("light sensor reads ");
@@ -72,7 +88,6 @@ void loop() {
   Serial.println(Ftemperature);
 
   tmpAvg.addValue( Ftemperature);
-  Serial.print("Running Average: ");
 
   int avgMst = mstAvg.getAverage();
   int avgLgt = lgtAvg.getAverage();
@@ -81,11 +96,13 @@ void loop() {
 
   //output data to LCD
   lcd.begin(16, 2);
-  lcd.print(" MD |  L  |  T");
+  lcd.print(" M% |  L  |  T");
   lcd.setCursor(0, 1);
   lcd.print("    |     |");
   lcd.setCursor(0, 1);
-  lcd.print(avgMst);
+  lcd.print( MoisturePercentage(avgMst,mst100));
+  lcd.setCursor(4, 1);
+  lcd.print("|");
   lcd.setCursor(6, 1);
   lcd.print(avgLgt);
   lcd.setCursor(11, 1);
@@ -96,18 +113,22 @@ void loop() {
     lcd.setCursor(15, 0);
     lcd.print("*");  
   }
-
-
-
+  char name[] = "APP.TXT";
+  ofstream sdout(name, ios::out | ios::app);
+  if (!sdout) {
+    Serial.println("open failed");
+  }
+  sdout  << "M:" << MoisturePercentage(avgMst,mst100) << " T:" << tmpAvg.getAverage() << endl;
+  sdout.close();
 
   delay(delayTime);
 
   //sound alarm for low readings
   if (moisture_val_ac < 600){
     if (audibleAlarm){
-      buzz(speaker, 200, 50);
+      //  buzz(speaker, 200, 50);
     }
-    LEDalarm(LED, 10);  
+    //  LEDalarm(LED, 10);  
   }
 
 }
@@ -169,8 +190,13 @@ int SoilMoisture(){
   return reading;
 }
 
+float MoisturePercentage(int moisture, int mst100){
 
-
+  float percent;
+  percent = (moisture * 100.0)/mst100;
+  Serial.println(percent);
+  return (moisture * 100.0)/mst100;
+}
 
 
 
