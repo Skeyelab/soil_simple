@@ -25,7 +25,7 @@ int tempSensor = 0;
 int light_val;
 int temp_val;
 int moisture_val_ac;
-int delayTime = 1000 x 30;
+int delayTime = 1000 * 30;
 
 int tempCal = 3;
 
