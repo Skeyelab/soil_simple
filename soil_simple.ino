@@ -11,14 +11,12 @@ ArduinoOutStream cout(Serial);
 
 // store error strings in flash to save RAM
 #define error(s) sd.errorHalt_P(PSTR(s))
-#include <LiquidCrystal.h>
 #include "RunningAverage.h"
 
 RunningAverage tmpAvg(10);
 RunningAverage lgtAvg(10);
 RunningAverage mstAvg(10);
 
-LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
 int lightSensor = 1;
 int tempSensor = 0;
@@ -44,7 +42,7 @@ void setup() {
   if (!sd.begin(chipSelect, SPI_FULL_SPEED)) sd.initErrorHalt();
 
   Serial.begin(9600); //open serial port
-  pinMode(13, OUTPUT);
+  pinMode(12, OUTPUT);
   pinMode(8, OUTPUT);
   pinMode(9, INPUT);
 }
@@ -93,26 +91,7 @@ void loop() {
   int avgLgt = lgtAvg.getAverage();
 
 
-
-  //output data to LCD
-  lcd.begin(16, 2);
-  lcd.print(" M% |  L  |  T");
-  lcd.setCursor(0, 1);
-  lcd.print("    |     |");
-  lcd.setCursor(0, 1);
-  lcd.print( MoisturePercentage(avgMst,mst100));
-  lcd.setCursor(4, 1);
-  lcd.print("|");
-  lcd.setCursor(6, 1);
-  lcd.print(avgLgt);
-  lcd.setCursor(11, 1);
-  lcd.print(tmpAvg.getAverage());  
-  lcd.setCursor(15, 1);
-  lcd.print("F"); 
-  if (audibleAlarm){
-    lcd.setCursor(15, 0);
-    lcd.print("*");  
-  }
+  digitalWrite(12, HIGH);
   char name[] = "APP.TXT";
   ofstream sdout(name, ios::out | ios::app);
   if (!sdout) {
@@ -120,7 +99,9 @@ void loop() {
   }
   sdout  << "M:" << MoisturePercentage(avgMst,mst100) << " T:" << tmpAvg.getAverage() << endl;
   sdout.close();
-
+  delay(100);
+ // digitalWrite(13, LOW);
+  
   delay(delayTime);
 
   //sound alarm for low readings
@@ -197,6 +178,7 @@ float MoisturePercentage(int moisture, int mst100){
   Serial.println(percent);
   return (moisture * 100.0)/mst100;
 }
+
 
 
 
