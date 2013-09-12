@@ -11,19 +11,21 @@ ArduinoOutStream cout(Serial);
 
 // store error strings in flash to save RAM
 #define error(s) sd.errorHalt_P(PSTR(s))
+#include <LiquidCrystal.h>
 #include "RunningAverage.h"
 
 RunningAverage tmpAvg(10);
 RunningAverage lgtAvg(10);
 RunningAverage mstAvg(10);
 
+LiquidCrystal lcd(10, 11, 5, 4, 3, 2);
 
 int lightSensor = 1;
 int tempSensor = 0;
 int light_val;
 int temp_val;
 int moisture_val_ac;
-int delayTime = 1000 * 30;
+int delayTime = 500;
 
 int tempCal = 3;
 
@@ -34,26 +36,19 @@ int mst0 = 0;
 #define divider_top 7
 #define divider_bottom 8
 
-int switchState = 0;
-int audibleAlarm = 0;
 
 void setup() {
 
-  if (!sd.begin(chipSelect, SPI_FULL_SPEED)) sd.initErrorHalt();
+  if (!sd.begin(chipSelect, SPI_HALF_SPEED)) sd.initErrorHalt();
 
   Serial.begin(9600); //open serial port
-  pinMode(12, OUTPUT);
+  pinMode(13, OUTPUT);
   pinMode(8, OUTPUT);
-  pinMode(9, INPUT);
 }
 
 void loop() {
 
-  switchState=digitalRead(9);
 
-  if (switchState==HIGH){
-    audibleAlarm = !audibleAlarm;
-  }
   //collect moisture data
   moisture_val_ac = SoilMoisture();
   mstAvg.addValue( moisture_val_ac);
@@ -91,56 +86,39 @@ void loop() {
   int avgLgt = lgtAvg.getAverage();
 
 
-  digitalWrite(12, HIGH);
+
+  //output data to LCD
+  lcd.begin(16, 2);
+  lcd.print(" M% |  L  |  T");
+  lcd.setCursor(0, 1);
+  lcd.print("    |     |");
+  lcd.setCursor(0, 1);
+  lcd.print( MoisturePercentage(avgMst,mst100));
+  lcd.setCursor(4, 1);
+  lcd.print("|");
+  lcd.setCursor(6, 1);
+  lcd.print(avgLgt);
+  lcd.setCursor(11, 1);
+  lcd.print(tmpAvg.getAverage());  
+  lcd.setCursor(15, 1);
+  lcd.print("F"); 
+
+
+  digitalWrite(13, HIGH);
+  delay(100);
+  digitalWrite(13, LOW);
+
   char name[] = "APP.TXT";
   ofstream sdout(name, ios::out | ios::app);
-  if (!sdout) {
-    Serial.println("open failed");
-  }
+  if (!sdout) error("open failed");
   sdout  << "M:" << MoisturePercentage(avgMst,mst100) << " T:" << tmpAvg.getAverage() << endl;
   sdout.close();
-  delay(100);
- // digitalWrite(13, LOW);
-  
   delay(delayTime);
 
-  //sound alarm for low readings
-  if (moisture_val_ac < 600){
-    if (audibleAlarm){
-      //  buzz(speaker, 200, 50);
-    }
-    //  LEDalarm(LED, 10);  
-  }
+
 
 }
 
-void LEDalarm(int targetPin, int numFlashes){
-
-  for (int Flashes = 0; Flashes < numFlashes; Flashes++) { 
-    digitalWrite(targetPin, HIGH);
-    delay(1000);
-    digitalWrite(targetPin, LOW);
-    delay(500);
-  }
-
-}
-
-void buzz(int targetPin, long frequency, long length) {
-  digitalWrite(13,HIGH);
-  long delayValue = 1000000/frequency/2; // calculate the delay value between transitions
-  //// 1 second's worth of microseconds, divided by the frequency, then split in half since
-  //// there are two phases to each cycle
-  long numCycles = frequency * length/ 1000; // calculate the number of cycles for proper timing
-  //// multiply frequency, which is really cycles per second, by the number of seconds to 
-  //// get the total number of cycles to produce
-  for (long i=0; i < numCycles; i++){ // for the calculated length of time...
-    digitalWrite(targetPin,HIGH); // write the buzzer pin high to push out the diaphram
-    delayMicroseconds(delayValue); // wait for the calculated delay value
-    digitalWrite(targetPin,LOW); // write the buzzer pin low to pull back the diaphram
-    delayMicroseconds(delayValue); // wait again or the calculated delay value
-  }
-  digitalWrite(13,LOW);
-}
 
 int SoilMoisture(){
   int reading;
