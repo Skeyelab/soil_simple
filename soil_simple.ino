@@ -1,24 +1,24 @@
 #include <SdFat.h>
+#include <SoftwareSerial.h>
+#include <serLCD.h>
+#include "RunningAverage.h"
 
 // SD chip select pin
 const uint8_t chipSelect = SS;
-
 // file system object
 SdFat sd;
-
 // create Serial stream
 ArduinoOutStream cout(Serial);
-
 // store error strings in flash to save RAM
 #define error(s) sd.errorHalt_P(PSTR(s))
-#include <LiquidCrystal.h>
-#include "RunningAverage.h"
+
+int pin = 2;
+serLCD lcd(pin);
 
 RunningAverage tmpAvg(10);
 RunningAverage lgtAvg(10);
 RunningAverage mstAvg(10);
 
-LiquidCrystal lcd(10, 11, 5, 4, 3, 2);
 
 int lightSensor = 1;
 int tempSensor = 0;
@@ -27,7 +27,7 @@ int temp_val;
 int moisture_val_ac;
 int delayTime = 500;
 
-int tempCal = 3;
+int tempCal = 0;
 
 int mst100 = 900;
 int mst0 = 0;
@@ -38,12 +38,13 @@ int mst0 = 0;
 
 
 void setup() {
-
+  lcd.setBrightness(30);
+  lcd.clear();
+  lcd.print("Booting...");
   if (!sd.begin(chipSelect, SPI_HALF_SPEED)) sd.initErrorHalt();
-
   Serial.begin(9600); //open serial port
-  pinMode(13, OUTPUT);
-  pinMode(8, OUTPUT);
+  delay(500);
+  lcd.print("OK");
 }
 
 void loop() {
@@ -86,39 +87,23 @@ void loop() {
   int avgLgt = lgtAvg.getAverage();
 
 
+  lcd.clear();
+  lcd.print(tmpAvg.getAverage());
 
-  //output data to LCD
-  lcd.begin(16, 2);
-  lcd.print(" M% |  L  |  T");
-  lcd.setCursor(0, 1);
-  lcd.print("    |     |");
-  lcd.setCursor(0, 1);
-  lcd.print( MoisturePercentage(avgMst,mst100));
-  lcd.setCursor(4, 1);
-  lcd.print("|");
-  lcd.setCursor(6, 1);
-  lcd.print(avgLgt);
-  lcd.setCursor(11, 1);
-  lcd.print(tmpAvg.getAverage());  
-  lcd.setCursor(15, 1);
-  lcd.print("F"); 
 
 
   digitalWrite(13, HIGH);
   delay(100);
   digitalWrite(13, LOW);
 
-  char name[] = "APP.TXT";
-  ofstream sdout(name, ios::out | ios::app);
-  if (!sdout) error("open failed");
-  sdout  << "M:" << MoisturePercentage(avgMst,mst100) << " T:" << tmpAvg.getAverage() << endl;
-  sdout.close();
-  delay(delayTime);
-
-
+    char name[] = "APP.TXT";
+    ofstream sdout(name, ios::out | ios::app);
+    if (!sdout) error("open failed");
+    sdout  << "M:" << MoisturePercentage(avgMst,mst100) << " T:" << tmpAvg.getAverage() << endl;
+    sdout.close();
+    delay(delayTime);
 
 }
-
 
 int SoilMoisture(){
   int reading;
@@ -156,6 +141,8 @@ float MoisturePercentage(int moisture, int mst100){
   Serial.println(percent);
   return (moisture * 100.0)/mst100;
 }
+
+
 
 
 
