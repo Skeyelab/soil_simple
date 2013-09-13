@@ -1,31 +1,27 @@
-#include <SdFat.h>
 #include <SoftwareSerial.h>
 #include <serLCD.h>
 #include "RunningAverage.h"
+#include <SD.h>
 
-// SD chip select pin
-const uint8_t chipSelect = SS;
-// file system object
-SdFat sd;
-// create Serial stream
-ArduinoOutStream cout(Serial);
-// store error strings in flash to save RAM
-#define error(s) sd.errorHalt_P(PSTR(s))
+Sd2Card card;
+SdVolume volume;
+SdFile root;
 
 int pin = 2;
 serLCD lcd(pin);
 
-RunningAverage tmpAvg(10);
-RunningAverage lgtAvg(10);
+RunningAverage tmpAvg(100);
+//RunningAverage lgtAvg(10);
 RunningAverage mstAvg(10);
 
+const int chipSelect = 10;
 
 int lightSensor = 1;
 int tempSensor = 0;
 int light_val;
 int temp_val;
 int moisture_val_ac;
-int delayTime = 500;
+int delayTime = 5000;
 
 int tempCal = 0;
 
@@ -41,18 +37,41 @@ void setup() {
   lcd.setBrightness(30);
   lcd.clear();
   lcd.print("Booting...");
-  if (!sd.begin(chipSelect, SPI_HALF_SPEED)) sd.initErrorHalt();
-  Serial.begin(9600); //open serial port
   delay(500);
+  Serial.begin(9600); //open serial port
+  lcd.clear();
+  lcd.print("Initializing SD card...");
+  delay(500);
+
+  // make sure that the default chip select pin is set to
+  // output, even if you don't use it:
+  pinMode(10, OUTPUT);
+
+  // see if the card is present and can be initialized:
+  if (!SD.begin(chipSelect)) {
+    lcd.clear();
+    lcd.print("Card failed, or not present");
+    delay(500);
+
+    // don't do anything more:
+    return;
+  }
+  lcd.clear();
+  lcd.print("card initialized");
+  delay(500);
+
+  lcd.clear();
   lcd.print("OK");
+  delay(500);
+
 }
 
 void loop() {
 
 
   //collect moisture data
-  moisture_val_ac = SoilMoisture();
-  mstAvg.addValue( moisture_val_ac);
+  // moisture_val_ac = SoilMoisture();
+  // mstAvg.addValue( moisture_val_ac);
 
   Serial.print("Moistrue Reading ");
   Serial.print(moisture_val_ac);
@@ -62,7 +81,7 @@ void loop() {
   light_val = analogRead(lightSensor); // read the value from the photosensor
   Serial.print("light sensor reads ");
   Serial.println( light_val );
-  lgtAvg.addValue( light_val);
+  //  lgtAvg.addValue( light_val);
 
 
   //collect temp data  
@@ -83,26 +102,40 @@ void loop() {
 
   tmpAvg.addValue( Ftemperature);
 
-  int avgMst = mstAvg.getAverage();
-  int avgLgt = lgtAvg.getAverage();
-
+  //  int avgMst = mstAvg.getAverage();
+  //  int avgLgt = lgtAvg.getAverage();
+  int avgTmp = tmpAvg.getAverage();
 
   lcd.clear();
+
   lcd.print(tmpAvg.getAverage());
 
+  // make a string for assembling the data to log:
+  String dataString = "poops!";
 
+  // open the file. note that only one file can be open at a time,
+  // so you have to close this one before opening another.
+  File dataFile = SD.open("OVERNIGHTTEST.txt", FILE_WRITE);
 
-  digitalWrite(13, HIGH);
-  delay(100);
-  digitalWrite(13, LOW);
+  // if the file is available, write to it:
+  if (dataFile) {
+    dataFile.println(dataString);
+    dataFile.close();
+    // print to the serial port too:
+    Serial.println("written:");
+    Serial.println(dataString);
+  }  
+  // if the file isn't open, pop up an error:
+  else {
+    Serial.println("error opening datalog.txt");
+  } 
+  lcd.selectLine(2);
+int dots = 16;
 
-    char name[] = "APP.TXT";
-    ofstream sdout(name, ios::out | ios::app);
-    if (!sdout) error("open failed");
-    sdout  << "M:" << MoisturePercentage(avgMst,mst100) << " T:" << tmpAvg.getAverage() << endl;
-    sdout.close();
-    delay(delayTime);
-
+  for(int u = 0; u < dots; u++){
+    lcd.print(".");
+    delay(delayTime/dots);
+  }
 }
 
 int SoilMoisture(){
@@ -141,6 +174,12 @@ float MoisturePercentage(int moisture, int mst100){
   Serial.println(percent);
   return (moisture * 100.0)/mst100;
 }
+
+
+
+
+
+
 
 
 
