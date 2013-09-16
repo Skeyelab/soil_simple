@@ -10,27 +10,27 @@ SdFile root;
 int pin = 2;
 serLCD lcd(pin);
 
-RunningAverage tmpAvg(100);
+RunningAverage tmpAvg(20);
 //RunningAverage lgtAvg(10);
-RunningAverage mstAvg(10);
+RunningAverage mstAvg(20);
 
 const int chipSelect = 10;
 
-int lightSensor = 1;
+//int lightSensor = 1;
 int tempSensor = 0;
 int light_val;
 int temp_val;
 int moisture_val_ac;
-int delayTime = 5000;
+int delayTime = 3000;
 
 int tempCal = 0;
 
 int mst100 = 900;
 int mst0 = 0;
 
-#define moisture_input 4
-#define divider_top 7
-#define divider_bottom 8
+#define moisture_input 2
+#define divider_top 3
+#define divider_bottom 4
 
 
 void setup() {
@@ -70,17 +70,17 @@ void loop() {
 
 
   //collect moisture data
-  // moisture_val_ac = SoilMoisture();
-  // mstAvg.addValue( moisture_val_ac);
+   moisture_val_ac = SoilMoisture();
+   mstAvg.addValue( moisture_val_ac);
 
   Serial.print("Moistrue Reading ");
   Serial.print(moisture_val_ac);
   Serial.print(" ");
   Serial.println(MoisturePercentage(moisture_val_ac,mst100));
   //collect light data  
-  light_val = analogRead(lightSensor); // read the value from the photosensor
-  Serial.print("light sensor reads ");
-  Serial.println( light_val );
+//  light_val = analogRead(lightSensor); // read the value from the photosensor
+//  Serial.print("light sensor reads ");
+//  Serial.println( light_val );
   //  lgtAvg.addValue( light_val);
 
 
@@ -102,39 +102,45 @@ void loop() {
 
   tmpAvg.addValue( Ftemperature);
 
-  //  int avgMst = mstAvg.getAverage();
+  int avgMst = mstAvg.getAverage();
   //  int avgLgt = lgtAvg.getAverage();
   int avgTmp = tmpAvg.getAverage();
 
+
+
   lcd.clear();
-
-  lcd.print(tmpAvg.getAverage());
-
+  
+  lcd.print("Tmp:");
+  lcd.print(avgTmp);
+  lcd.print("  Mst:");
+  lcd.print(moisture_val_ac);
+ 
   // make a string for assembling the data to log:
-  String dataString = "poops!";
+  //String dataString = "poops!";
 
   // open the file. note that only one file can be open at a time,
   // so you have to close this one before opening another.
-  File dataFile = SD.open("OVERNIGHTTEST.txt", FILE_WRITE);
+  File dataFile = SD.open("real.csv", FILE_WRITE);
 
   // if the file is available, write to it:
   if (dataFile) {
-    dataFile.println(dataString);
+    dataFile.print(avgTmp);
+    dataFile.print(",");
+    dataFile.println(avgMst);
     dataFile.close();
     // print to the serial port too:
     Serial.println("written:");
-    Serial.println(dataString);
+    Serial.println(avgTmp);
   }  
   // if the file isn't open, pop up an error:
   else {
     Serial.println("error opening datalog.txt");
   } 
   lcd.selectLine(2);
-int dots = 16;
 
-  for(int u = 0; u < dots; u++){
+  for(int u = 0; u < 16; u++){
     lcd.print(".");
-    delay(delayTime/dots);
+    delay(delayTime/16);
   }
 }
 
